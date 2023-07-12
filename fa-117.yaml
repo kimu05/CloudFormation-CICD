@@ -1,9 +1,8 @@
-AWSTemplateFormatVersion: 2010-09-09
-
+AWSTemplateFormatVersion: "2010-09-09"
 Parameters:
   TemplateBucketName:
     Type: String
-    Default: [bucket-name]
+    Default: cicdtest-20230712
     
   Prefix:
     Type: String
@@ -19,7 +18,7 @@ Parameters:
 
   MailAddress:
     Type: String
-    Default: mail@example.com
+    Default: kimu.000000218@gmail.com
     
   ProdStackConfig:
     Type: String

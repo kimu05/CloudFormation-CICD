@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: 2010-09-09
+AWSTemplateFormatVersion: "2010-09-09"
 
 Parameters:
   MailAddress:
@@ -16,7 +16,6 @@ Resources:
         - Endpoint: !Ref MailAddress
           Protocol: email
       TopicName: !Ref Prefix
-      
       
 Outputs:
   TopicArn:
