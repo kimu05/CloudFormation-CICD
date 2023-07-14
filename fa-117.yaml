@@ -30,7 +30,7 @@ Parameters:
     
   TemplateFileName:
     Type: String
-    Default: sample-lambda.yaml
+    Default: CF-Tutorial.yaml
     
   TestStackConfig:
     Type: String

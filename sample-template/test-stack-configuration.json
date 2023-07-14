@@ -1,6 +1,5 @@
 {
   "Parameters" : {
-    "Environment": "test",
-    "MemorySize": "128"
+    "Environment": "test"
   }
 }

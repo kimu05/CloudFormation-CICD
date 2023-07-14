@@ -21,9 +21,9 @@ Parameters:
     Type: String
     Default: python3.8
     
-    
-Resources:
-    
+  Timeout:
+    Type: Number
+    Default: 300
 
 Resources:
   Function:
@@ -36,6 +36,7 @@ Resources:
       FunctionName: !Sub "${Prefix}-${Environment}-Function"
       Handler: !Ref Handler
       MemorySize: !Ref MemorySize
+      Timeout: !Ref Timeout
       Runtime: !Ref Runtime
       Role: !GetAtt LambdaRole.Arn
 
