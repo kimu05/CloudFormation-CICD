@@ -13,7 +13,7 @@ Resources:
       CidrBlock: 10.0.0.0/16
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial-VPC"
 
   # IGW作成
   InternetGateway:
@@ -21,7 +21,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: !Sub　"${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial"
 
   AttachGateway:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -37,7 +37,7 @@ Resources:
       VpcId: !Ref FirstVPC
       Tags:
         - Key: Name
-          Value:  !Sub "${Environment}-Tutorial"
+          Value:  !Sub "${Environment}-Tutorial-RT"
 
   # ルートテーブルへIGWの関連付け
   FrontendRoute:
@@ -59,7 +59,7 @@ Resources:
       VpcId: !Ref FirstVPC
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial-pub-a"
 
   FrontendSubnet2:
     Type: AWS::EC2::Subnet
@@ -71,7 +71,7 @@ Resources:
       VpcId: !Ref FirstVPC
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial-pub-c"
 
   PrivateSubnet:
     Type: "AWS::EC2::Subnet"
@@ -81,7 +81,7 @@ Resources:
       VpcId: !Ref FirstVPC
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial-pri-a"
 
   PrivateSubnet2:
     Type: "AWS::EC2::Subnet"
@@ -91,13 +91,19 @@ Resources:
       VpcId: !Ref FirstVPC
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial-pri-c"
 
   # サブネットをルーティングテーブルと紐付け
-  FrontendSubnetRouteTableAssociation:
+  FrontendSubnetRouteTableAssociation01:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref FrontendSubnet
+      RouteTableId: !Ref FrontendRouteTable
+
+  FrontendSubnetRouteTableAssociation02:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref FrontendSubnet2
       RouteTableId: !Ref FrontendRouteTable
 
   # セキュリティグループ作成
@@ -108,8 +114,8 @@ Resources:
       VpcId: !Ref FirstVPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
+          FromPort: 8501
+          ToPort: 8501
           CidrIp: "0.0.0.0/0"
         - IpProtocol: tcp
           FromPort: 22
@@ -117,7 +123,7 @@ Resources:
           CidrIp: "126.13.205.24/32"
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial-ec2-SG"
 
   DBEC2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -131,44 +137,44 @@ Resources:
         CidrIp: "10.0.0.100/32"
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: !Sub "${Environment}-Tutorial-rds-SG"
 
-#  # S3アクセス用ロールの作成
-#  S3AccessRole:
-#    Type: AWS::IAM::Role
-#    Properties:
-#      AssumeRolePolicyDocument:
-#        Version: "2012-10-17"
-#        Statement:
-#          - Effect: Allow
-#            Principal:
-#              Service:
-#                - "ec2.amazonaws.com"
-#            Action:
-#              - "sts:AssumeRole"
-#      Path: "/"
-#      ManagedPolicyArns:
-#        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
-#      RoleName: S3Access
-#      Tags:
-#        - Key: Name
-#          Value: CF-Tutorial
-#
-#  S3AccessInstanceProfile:
-#    Type: "AWS::IAM::InstanceProfile"
-#    Properties:
-#      Path: "/"
-#      Roles:
-#        - Ref: S3AccessRole
+  # S3アクセス用ロールの作成
+  S3AccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+      RoleName: S3Access
+      Tags:
+        - Key: Name
+          Value: CF-Tutorial-s3access-role
+
+  S3AccessInstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: S3AccessRole
 
   # EC2インスタンス作成
   Ec2InstanceServer:
     Type: "AWS::EC2::Instance"
     Properties:
-#      IamInstanceProfile:
-#        !Ref S3AccessInstanceProfile
+      IamInstanceProfile:
+        !Ref S3AccessInstanceProfile
       # AmazonLinuxを指定しています
-      ImageId: ami-05ffd9ad4ddd0d6e2
+      ImageId: ami-0d3bbfd074edd7acb
       InstanceType: "t2.micro"
       KeyName: "training-dev-keypair"
       SecurityGroupIds:
@@ -179,7 +185,31 @@ Resources:
       #KeyName: Raise-Tech_kimu
       Tags:
         - Key: Name
-          Value: !Sub "${Environment}-Tutorial"
+          Value: "python-app"
+      UserData:
+        Fn::Base64: |-
+          #!/bin/bash
+          yum install -y pip
+          pip3 install streamlit
+          pip3 install yfinance
+          yum install -y ruby
+          yum install -y aws-cli
+          yum install -y git
+          cd /home/ec2-user
+          git clone https://github.com/kimu05/my-app.git
+          wget https://aws-codedeploy-ap-northeast-1.s3.ap-northeast-1.amazonaws.com/latest/install
+          chmod +x ./install
+          ./install auto
+          echo "[Unit]" > /etc/systemd/system/my-app.service
+          echo "Description=Run app" >> /etc/systemd/system/my-app.service
+          echo "After=network.target" >> /etc/systemd/system/my-app.service
+          echo "[Service]" >> /etc/systemd/system/my-app.service
+          echo "WorkingDirectory=/home/ec2-user/my-app" >> /etc/systemd/system/my-app.service
+          echo "ExecStart=/home/ec2-user/my-app/run.sh" >> /etc/systemd/system/my-app.service
+          echo "Restart=always" >> /etc/systemd/system/my-app.service
+          echo "User=ec2-user" >> /etc/systemd/system/my-app.service
+          echo "[Install]" >> /etc/systemd/system/my-app.service
+          echo "WantedBy=multi-user.target" >> /etc/systemd/system/my-app.service
 
 
 #  # S3バケット作成
